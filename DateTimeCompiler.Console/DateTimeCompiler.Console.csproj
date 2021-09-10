@@ -5,4 +5,16 @@
     <TargetFramework>netcoreapp3.1</TargetFramework>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\DateTimeCompiler.Core\DateTimeCompiler.Core.csproj" />
+    <ProjectReference Include="..\DateTimeCompiler.Lexer\DateTimeCompiler.Lexer.csproj" />
+    <ProjectReference Include="..\DateTimeCompiler.Parser\DateTimeCompiler.Parser.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="code.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>
