@@ -14,5 +14,8 @@
         {
             return $"{Lexeme} Type: {TokenType}  Line: {Line} Column: {Column}";
         }
+
+        public static bool operator ==(Token a, Token b) => a.TokenType == b.TokenType;
+        public static bool operator !=(Token a, Token b) => a.TokenType != b.TokenType;
     }
 }

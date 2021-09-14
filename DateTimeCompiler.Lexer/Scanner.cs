@@ -41,13 +41,6 @@ namespace DateTimeCompiler.Lexer
                 if (char.IsDigit(currentChar))
                 {
                     lexeme.Append(currentChar);
-                    currentChar = PeekNextChar();
-                    while (char.IsDigit(currentChar))
-                    {
-                        currentChar = GetNextChar();
-                        lexeme.Append(currentChar);
-                        currentChar = PeekNextChar();
-                    }
                     return new Token
                     {
                         TokenType = TokenType.Number,

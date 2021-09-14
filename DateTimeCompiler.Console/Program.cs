@@ -12,10 +12,8 @@ namespace DateTimeCompiler.Console
             var code = File.ReadAllText("code.txt").Replace(Environment.NewLine, "\n");
             var input = new Input(code);
             var scanner = new Scanner(input);
-            while (true)
-            {
-                scanner.GetNextToken();
-            }
+            var parser = new Parser.Parser(scanner);
+            parser.Parse();
             System.Console.WriteLine("Success!{code}");
         }
     }
