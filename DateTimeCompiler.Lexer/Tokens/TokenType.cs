@@ -1,7 +1,8 @@
-﻿namespace DateTimeCompiler.Lexer
+﻿namespace DateTimeCompiler.Lexer.Tokens
 {
     public enum TokenType
     { 
+        Basic,
         Number,
         Slash,
         Plus,

@@ -5,6 +5,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\DateTimeCompiler.Core\DateTimeCompiler.Core.csproj" />
     <ProjectReference Include="..\DateTimeCompiler.Lexer\DateTimeCompiler.Lexer.csproj" />
   </ItemGroup>
 

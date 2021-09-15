@@ -1,7 +1,12 @@
 ﻿using System;
-using System.Linq.Expressions;
+using System.Collections.Generic;
+using System.Linq;
+using DateTimeCompiler.Core;
+using DateTimeCompiler.Core.Expressions;
+using DateTimeCompiler.Core.Statements;
 using DateTimeCompiler.Lexer;
 using DateTimeCompiler.Lexer.Tokens;
+using Type = DateTimeCompiler.Core.Type;
 
 // ReSharper disable once InvalidXmlDocComment
 /// <summary>
@@ -35,133 +40,182 @@ namespace DateTimeCompiler.Parser
         }
         public void Parse()
         {
-            Program();
+            var program =Program();
+            program.ValidateSemantic();
+            program.Interpret();
         }
 
-        private void Program()
+        private Statement Program()
         {
-            States();
+            EnvironmentManager.PushContext();
+            return States();
         }
 
-        private void States()
+        private Statement States()
         {
-            State();
-            InnerStates();
+            return new SequenceStatement(State(), InnerStates());
         }
-        private void InnerStates()
+        private Statement InnerStates()
         {
             if (this.lookAhead.TokenType == TokenType.VarKeyword
                 || this.lookAhead.TokenType == TokenType.Variable
                 || this.lookAhead.TokenType == TokenType.Number)
             {
-                States();
+                return States();
             }
+
+            return null;
         }
-        private void State()
+        private Statement State()
         {
             switch (this.lookAhead.TokenType)
             {
                 case TokenType.VarKeyword:
-                    AssignationStatement();
-                    break;
+                    return AssignationStatement();
                 default:
-                    Expression();
-                    break;
+                    return new ExpressionStatement(Expression());
             }
         }
 
-        private void AssignationStatement()
+        private Statement AssignationStatement()
         {
             Match(TokenType.VarKeyword);
+            var token = lookAhead;
             Match(TokenType.Variable);
+            var id = new Id(token, Type.Date);
+            EnvironmentManager.AddVariable(token.Lexeme,id);
             Match(TokenType.Equal);
-            Expression();
+            return new AssignationStatement(id,Expression());
         }
 
-        private void Expression()
+        private Expression Expression()
         {
-            Factor();
+            var factors = Factor();
             while (this.lookAhead.TokenType == TokenType.Plus 
                    ||this.lookAhead.TokenType == TokenType.Substract )
             {
+                var token = lookAhead;
                 Move();
-                Factor();
+                factors = new BinaryExpression(token,factors,Factor());
             }
+
+            return factors;
         }
 
-        private void Factor()
+        private Expression Factor()
         {
+            List<Token> varList = new List<Token>();
             switch (this.lookAhead.TokenType)
             {
                 case TokenType.Variable:
+                    var token = lookAhead;
                     Match(TokenType.Variable);
-                    break;
-                case TokenType.Number:
+                    return EnvironmentManager.GetSymbol(token.Lexeme).Id;
+                default:
+                    token = lookAhead;
                     Match(TokenType.Number);
                     if (this.lookAhead.TokenType==TokenType.Number)
                     {
+                        var token2 = lookAhead;
                         Match(TokenType.Number);
                         if (this.lookAhead.TokenType == TokenType.Colon)
                         {
-                            TimeStamp();
+                            return TimeStamp(token, token2);
                         }
                         else if (this.lookAhead.TokenType == TokenType.Slash)
                         {
-                            Date();
+                            return Date(token, token2);
                         }
                         else
                         {
                             while (this.lookAhead.TokenType == TokenType.Number)
                             {
+                                varList.Add(lookAhead);
                                 Match(TokenType.Number);
                             }
                         }
                     }
+
+                    ConstantExpression constantExpression;
                     switch (this.lookAhead.TokenType)
                     {
                         case TokenType.HourKeyword:
+                            token = lookAhead;
                             Match(TokenType.HourKeyword);
+                            constantExpression = new ConstantExpression(token,Type.Hour, string.Concat(varList.Select(x => x.Lexeme)));
                             break;
                         case TokenType.MinuteKeyword:
+                            token = lookAhead;
                             Match(TokenType.MinuteKeyword);
+                            constantExpression = new ConstantExpression(token, Type.Minute, string.Concat(varList.Select(x => x.Lexeme)));
                             break;
                         case TokenType.SecondKeyword:
+                            token = lookAhead;
                             Match(TokenType.SecondKeyword);
+                            constantExpression = new ConstantExpression(token, Type.Second, string.Concat(varList.Select(x => x.Lexeme)));
                             break;
                         case TokenType.DayKeyword:
+                            token = lookAhead;
                             Match(TokenType.DayKeyword);
+                            constantExpression = new ConstantExpression(token, Type.Day, string.Concat(varList.Select(x => x.Lexeme)));
                             break;
                         case TokenType.MonthKeyword:
+                            token = lookAhead;
                             Match(TokenType.MonthKeyword);
+                            constantExpression = new ConstantExpression(token, Type.Month, string.Concat(varList.Select(x => x.Lexeme)));
                             break;
-                        case TokenType.YearKeyword:
+                        default:
+                            token = lookAhead;
                             Match(TokenType.YearKeyword);
+                            constantExpression = new ConstantExpression(token, Type.Year, string.Concat(varList.Select(x => x.Lexeme)));
                             break;
                     }
-                    break;
+                    return constantExpression;
             }
         }
 
-        private void Date()
+        private Expression Date(Token token1, Token token2)
         {
+            List<Token> list = new List<Token>();
+            list.Add(token1);
+            list.Add(token2);
+            list.Add(lookAhead);
             Match(TokenType.Slash);
+            list.Add(lookAhead);
             Match(TokenType.Number);
+            list.Add(lookAhead);
             Match(TokenType.Number);
+            list.Add(lookAhead);
             Match(TokenType.Slash);
+            list.Add(lookAhead);
             Match(TokenType.Number);
+            list.Add(lookAhead);
             Match(TokenType.Number);
+            list.Add(lookAhead);
             Match(TokenType.Number);
+            list.Add(lookAhead);
             Match(TokenType.Number);
+            return new ConstantExpression(null , Type.Date, string.Concat(list.Select(x => x.Lexeme)));
         }
 
-        private void TimeStamp()
+        private Expression TimeStamp(Token token1, Token token2)
         {
+            List<Token> list = new List<Token>();
+            list.Add(token1);
+            list.Add(token2);
+            list.Add(lookAhead);
             Match(TokenType.Colon);
+            list.Add(lookAhead);
             Match(TokenType.Number);
+            list.Add(lookAhead);
             Match(TokenType.Number);
+            list.Add(lookAhead);
             Match(TokenType.Colon);
+            list.Add(lookAhead);
             Match(TokenType.Number);
+            list.Add(lookAhead);
             Match(TokenType.Number);
+            return new ConstantExpression(null, Type.TimeStamp, string.Concat(list.Select(x => x.Lexeme)));
         }
 
         private void Move()
