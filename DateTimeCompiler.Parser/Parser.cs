@@ -113,9 +113,11 @@ namespace DateTimeCompiler.Parser
                     return EnvironmentManager.GetSymbol(token.Lexeme).Id;
                 default:
                     token = lookAhead;
+                    varList.Add(lookAhead);
                     Match(TokenType.Number);
                     if (this.lookAhead.TokenType==TokenType.Number)
                     {
+                        varList.Add(lookAhead);
                         var token2 = lookAhead;
                         Match(TokenType.Number);
                         if (this.lookAhead.TokenType == TokenType.Colon)

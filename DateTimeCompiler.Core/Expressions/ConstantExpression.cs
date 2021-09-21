@@ -22,7 +22,12 @@ namespace DateTimeCompiler.Core.Expressions
                 case "TimeStamp":
                     return TimeSpan.Parse(Lexeme);
                 case "Hour":
-                    return int.Parse("10");
+                case "Minute":
+                case "Second":
+                case "Year":
+                case "Month":
+                case "Day":
+                    return int.Parse(Lexeme);
             }
 
             return null;
