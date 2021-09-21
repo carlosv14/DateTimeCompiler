@@ -7,6 +7,7 @@ namespace DateTimeCompiler.Core.Expressions
     public class BinaryExpression: Expression
     {
         private readonly Dictionary<(Type, Type), Type> _typeRules;
+        private readonly Dictionary<Type, Func<DateTime, dynamic, dynamic>> _evaluationDictionary;
         public Expression LeftExpression { get; }
         public Expression RightExpression { get; }
 
@@ -26,98 +27,48 @@ namespace DateTimeCompiler.Core.Expressions
                 {(Type.TimeStamp, Type.Minute), Type.TimeStamp},
                 {(Type.TimeStamp, Type.Second), Type.TimeStamp},
             };
+            _evaluationDictionary = new Dictionary<Type, Func<DateTime, dynamic, dynamic>>
+            {
+                [Type.Hour] = (leftExpression, rightExpression) => leftExpression.AddHours(rightExpression),
+                [Type.Minute] = (leftExpression, rightExpression) => leftExpression.AddMinutes(rightExpression),
+                [Type.Second] = (leftExpression, rightExpression) => leftExpression.AddSeconds(rightExpression),
+                [Type.Year] = (leftExpression, rightExpression) => leftExpression.AddYears(rightExpression),
+                [Type.Month] = (leftExpression, rightExpression) => leftExpression.AddMonths(rightExpression),
+                [Type.Day] = (leftExpression, rightExpression) => leftExpression.AddDays(rightExpression),
+            };
         }
 
         public override dynamic Evaluate()
         {
+            var rightExpressionType = RightExpression.GetExpressionType();
             if (Token.TokenType== TokenType.Plus)
             {
-                //TimeStamp + Something
-                if (RightExpression.GetExpressionType()==Type.Hour)
+                if (_evaluationDictionary.ContainsKey(rightExpressionType))
                 {
-                    var leftExpressionDate = LeftExpression.Evaluate() is DateTime ? (DateTime)LeftExpression.Evaluate() : default;
-                    var rightExpression = RightExpression.Evaluate();
-                    return leftExpressionDate.AddHours(rightExpression);
+                    return GetExpressionResult(1);
                 }
-                else if (RightExpression.GetExpressionType() == Type.Minute)
-                {
-                    var leftExpressionDate = LeftExpression.Evaluate() is DateTime ? (DateTime)LeftExpression.Evaluate() : default;
-                    var rightExpression = RightExpression.Evaluate();
-                    return leftExpressionDate.AddMinutes(rightExpression);
-                }
-                else if (RightExpression.GetExpressionType() == Type.Second)
-                {
-                    var leftExpressionDate = LeftExpression.Evaluate() is DateTime ? (DateTime)LeftExpression.Evaluate() : default;
-                    var rightExpression = RightExpression.Evaluate();
-                    return leftExpressionDate.AddSeconds(rightExpression);
-                }
-                //DateTime + Something
-                if (RightExpression.GetExpressionType() == Type.Year)
-                {
-                    var leftExpressionDate = LeftExpression.Evaluate() is DateTime ? (DateTime)LeftExpression.Evaluate() : default;
-                    var rightExpression = RightExpression.Evaluate();
-                    return leftExpressionDate.AddYears(rightExpression);
-                }
-                else if (RightExpression.GetExpressionType() == Type.Month)
-                {
-                    var leftExpressionDate = LeftExpression.Evaluate() is DateTime ? (DateTime)LeftExpression.Evaluate() : default;
-                    var rightExpression = RightExpression.Evaluate();
-                    return leftExpressionDate.AddMonths(rightExpression);
-                }
-                else if (RightExpression.GetExpressionType() == Type.Day)
-                {
-                    var leftExpressionDate = LeftExpression.Evaluate() is DateTime ? (DateTime)LeftExpression.Evaluate() : default;
-                    var rightExpression = RightExpression.Evaluate();
-                    return leftExpressionDate.AddDays(rightExpression);
-                }
-
                 return LeftExpression.Evaluate() + RightExpression.Evaluate();
             }
             else if(Token.TokenType == TokenType.Substract)
             {
-                //TimeStamp + Something
-                if (RightExpression.GetExpressionType() == Type.Hour)
+                if (_evaluationDictionary.ContainsKey(rightExpressionType))
                 {
-                    var leftExpressionDate = LeftExpression.Evaluate() is DateTime ? (DateTime)LeftExpression.Evaluate() : default;
-                    var rightExpression = RightExpression.Evaluate();
-                    return leftExpressionDate.AddHours(rightExpression * -1);
+                    return GetExpressionResult(-1);
                 }
-                else if (RightExpression.GetExpressionType() == Type.Minute)
-                {
-                    var leftExpressionDate = LeftExpression.Evaluate() is DateTime ? (DateTime)LeftExpression.Evaluate() : default;
-                    var rightExpression = RightExpression.Evaluate();
-                    return leftExpressionDate.AddMinutes(rightExpression * -1);
-                }
-                else if (RightExpression.GetExpressionType() == Type.Second)
-                {
-                    var leftExpressionDate = LeftExpression.Evaluate() is DateTime ? (DateTime)LeftExpression.Evaluate() : default;
-                    var rightExpression = RightExpression.Evaluate();
-                    return leftExpressionDate.AddSeconds(rightExpression * -1);
-                }
-                //DateTime + Something
-                if (RightExpression.GetExpressionType() == Type.Year)
-                {
-                    var leftExpressionDate = LeftExpression.Evaluate() is DateTime ? (DateTime)LeftExpression.Evaluate() : default;
-                    var rightExpression = RightExpression.Evaluate();
-                    return leftExpressionDate.AddYears(rightExpression * -1);
-                }
-                else if (RightExpression.GetExpressionType() == Type.Month)
-                {
-                    var leftExpressionDate = LeftExpression.Evaluate() is DateTime ? (DateTime)LeftExpression.Evaluate() : default;
-                    var rightExpression = RightExpression.Evaluate();
-                    return leftExpressionDate.AddMonths(rightExpression * -1);
-                }
-                else if (RightExpression.GetExpressionType() == Type.Day)
-                {
-                    var leftExpressionDate = LeftExpression.Evaluate() is DateTime ? (DateTime)LeftExpression.Evaluate() : default;
-                    var rightExpression = RightExpression.Evaluate();
-                    return leftExpressionDate.AddDays(rightExpression * -1);
-                }
+
                 return LeftExpression.Evaluate() - RightExpression.Evaluate();
             }
             throw new ApplicationException($"Cannot perform Binary operation on {LeftExpression.GetExpressionType()}, {RightExpression.GetExpressionType()}");
         }
 
+
+        private dynamic GetExpressionResult(int multiplier)
+        {
+            var rightExpressionType = RightExpression.GetExpressionType();
+            var leftExpressionDate = LeftExpression.Evaluate() is DateTime ? (DateTime)LeftExpression.Evaluate() : default;
+            var rightExpression = RightExpression.Evaluate();
+            return _evaluationDictionary[rightExpressionType](leftExpressionDate, rightExpression * multiplier);
+        }
         public override Type GetExpressionType()
         {
             if (_typeRules.TryGetValue((LeftExpression.GetExpressionType(), RightExpression.GetExpressionType()), out var resultType))
